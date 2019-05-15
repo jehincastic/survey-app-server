@@ -4,7 +4,7 @@ const express = require("express"),
     mongoose = require("mongoose"),
     indexRoutes = require("./routes/index"),
     surveyRoutes = require("./routes/survey"),
-    keys = require("./keys"),
+    keys = require("./keys/keys"),
     app = express();
 
 mongoose.connect(keys.DBlink, { useNewUrlParser: true });

@@ -1,7 +1,7 @@
 const express = require("express"),
     router = express.Router(),
     nodemailer = require("nodemailer"),
-    keys = require("../keys"),
+    keys = require("../keys/keys"),
     Survey = require("../models/survey");
 
 const transporter = nodemailer.createTransport({
