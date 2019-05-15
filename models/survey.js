@@ -8,7 +8,10 @@ const surveySchema = new mongoose.Schema({
     },
     title: String,
     questions: [String],
-    recipients: [Recipient]
+    recipients: [Recipient],
+    template: Number,
+    maxvalue: '',
+    minvalue: ''
 });
 
 module.exports = mongoose.model("Survey", surveySchema);

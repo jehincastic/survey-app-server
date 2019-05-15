@@ -13,14 +13,25 @@ const transporter = nodemailer.createTransport({
 });
 
 router.post("/add", (req, res) => {
-    const { user_id, title, questions, recipients } = req.body;
+    const {
+        user_id,
+        title,
+        questions,
+        recipients,
+        template,
+        maxvalue,
+        minvalue
+    } = req.body;
     const newSurvey = {
         user_id,
         title,
         questions,
         recipients: recipients
             .split(",")
-            .map(email => ({ email: email.trim() }))
+            .map(email => ({ email: email.trim() })),
+        template: template,
+        maxvalue: maxvalue,
+        minvalue: minvalue
     };
     Survey.create(newSurvey, (err, survey) => {
         if (err) {
@@ -97,15 +108,14 @@ router.get("/send", (req, res) => {
                                 console.log(err);
                                 res.json({ message: err });
                             }
-                        }, () => {
-                            if (done) {
-                                res.json({ message: "Send Successfully" });
-                            } else {
-                                res.json({ message: "failed to send" });
-                            }
                         });
                     }
                 });
+                if (done) {
+                    res.json({ message: "Send Successfully" });
+                } else {
+                    res.json({ message: "failed to send" });
+                }
             }
         });
     }
@@ -116,21 +126,26 @@ router.get("/:recid/:surid", (req, res) => {
     Survey.find({ _id: surid }, (err, survey) => {
         if (err) {
             console.log(err);
+            res.json({ message: "404 Not Found" });
         } else {
             let bool = false;
             let completed = false;
-            survey[0].recipients.forEach(r => {
-                if (r._id == recid) {
-                    bool = true;
+            if (survey[0].recipients) {
+                survey[0].recipients.forEach(r => {
+                    if (r._id == recid) {
+                        bool = true;
+                    }
+                    if (r._id == recid && r.responded) {
+                        completed = true;
+                    }
+                });
+                if (bool && !completed) {
+                    res.json(survey[0]);
+                } else if (bool && completed) {
+                    res.json({ message: "Response Submitted" });
+                } else {
+                    res.json({ message: "404 Not Found" });
                 }
-                if (r.id == recid && r.responded) {
-                    completed = true;
-                }
-            });
-            if (bool && !completed) {
-                res.json(survey[0]);
-            } else if (bool && completed) {
-                res.json({ message: "Response Submitted" });
             } else {
                 res.json({ message: "404 Not Found" });
             }
@@ -143,7 +158,7 @@ router.post("/:recid/:surid", (req, res) => {
     const { recid, surid } = req.params;
     Survey.find({ _id: surid }, (err, survey) => {
         if (err) {
-            res.json({message: "Failed To Update"});
+            res.json({ message: "Failed To Update" });
             console.log(err);
         } else {
             let done = false;
@@ -152,14 +167,17 @@ router.post("/:recid/:surid", (req, res) => {
                     survey[0].recipients[i].answers = answers;
                     survey[0].recipients[i].responded = true;
                     done = true;
-                    Survey.updateOne({_id: surid}, survey[0], (err, updated) => {
-                        if (err) {
-                            res.json({message: "Failed To Update"});
-
-                        } else {
-                            res.json({message: "Updated"});
+                    Survey.updateOne(
+                        { _id: surid },
+                        survey[0],
+                        (err, updated) => {
+                            if (err) {
+                                res.json({ message: "Failed To Update" });
+                            } else {
+                                res.json({ message: "Updated" });
+                            }
                         }
-                    })
+                    );
                 }
             }
         }
