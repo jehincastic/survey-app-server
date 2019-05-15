@@ -20,7 +20,8 @@ router.post("/add", (req, res) => {
         recipients,
         template,
         maxvalue,
-        minvalue
+        minvalue,
+        colTitle
     } = req.body;
     const newSurvey = {
         user_id,
@@ -31,7 +32,8 @@ router.post("/add", (req, res) => {
             .map(email => ({ email: email.trim() })),
         template: template,
         maxvalue: maxvalue,
-        minvalue: minvalue
+        minvalue: minvalue,
+        colTitle: colTitle
     };
     Survey.create(newSurvey, (err, survey) => {
         if (err) {
