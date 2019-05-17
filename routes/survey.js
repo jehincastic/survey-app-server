@@ -1,5 +1,6 @@
 const express = require("express"),
     router = express.Router(),
+    connection = require("../connection"),
     nodemailer = require("nodemailer"),
     keys = require("../keys/keys"),
     Survey = require("../models/survey");
@@ -13,7 +14,7 @@ const transporter = nodemailer.createTransport({
 });
 
 router.post("/add", (req, res) => {
-    const {
+    let {
         user_id,
         title,
         questions,
@@ -23,50 +24,179 @@ router.post("/add", (req, res) => {
         minvalue,
         colTitle
     } = req.body;
-    const newSurvey = {
-        user_id,
-        title,
-        questions,
-        recipients: recipients
-            .split(",")
-            .map(email => ({ email: email.trim() })),
-        template: template,
+    // const newSurvey = {
+    //     user_id,
+    //     title,
+    //     questions,
+    //     recipients: recipients
+    //         .split(",")
+    //         .map(email => ({ email: email.trim() })),
+    //     template: template,
+    //     maxvalue: maxvalue,
+    //     minvalue: minvalue,
+    //     colTitle: colTitle
+    // };
+
+    if (colTitle === undefined) {
+        colTitle = "";
+    }
+    if (maxvalue === undefined) {
+        maxvalue = "";
+    }
+    if (minvalue === undefined) {
+        minvalue = "";
+    }
+    const newSurveyTemplate = {
+        survey_user_id: user_id,
+        title: title,
+        templateNo: template,
         maxvalue: maxvalue,
         minvalue: minvalue,
-        colTitle: colTitle
+        coltitle: colTitle
     };
-    Survey.create(newSurvey, (err, survey) => {
-        if (err) {
-            console.log(err);
-        } else {
-            const result = {
-                message: "Survey Added Successfully"
-            };
-            res.json(result);
+
+    connection.query(
+        "INSERT INTO survey_template SET ?",
+        newSurveyTemplate,
+        (error, results, fields) => {
+            if (error) {
+                console.log(error);
+                res.json({ message: "Survey Failed To Add" });
+            } else {
+                let done = true;
+                const survey_id = results.insertId;
+                questions.forEach(q => {
+                    const ques = {
+                        questions: q,
+                        survey_template_id: survey_id
+                    };
+                    connection.query(
+                        "INSERT INTO survey_questions SET ?",
+                        ques,
+                        (error, results, fields) => {
+                            if (error) {
+                                res.json({ message: "Survey Failed To Add" });
+                                done = false;
+                            }
+                        }
+                    );
+                });
+                if (done) {
+                    const mail = recipients
+                        .split(",")
+                        .map(email => ({ email: email.trim() }));
+                    mail.forEach(r => {
+                        const recipient = {
+                            email: r.email,
+                            survey_template_id: survey_id
+                        };
+                        connection.query(
+                            "INSERT INTO survey_recipient SET ?",
+                            recipient,
+                            (error, results, fields) => {
+                                if (error) {
+                                    res.json({
+                                        message: "Survey Failed To Add"
+                                    });
+                                    done = false;
+                                }
+                            }
+                        );
+                    });
+                    connection.query("SELECT id from survey_recipient WHERE ");
+                }
+                if (done) {
+                    const result = {
+                        message: "Survey Added Successfully"
+                    };
+                    res.json(result);
+                }
+            }
         }
-    });
+    );
+
+    // Survey.create(newSurvey, (err, survey) => {
+    //     if (err) {
+    //         console.log(err);
+    //     } else {
+    //         const result = {
+    //             message: "Survey Added Successfully"
+    //         };
+    //         res.json(result);
+    //     }
+    // });
 });
 
 router.get("/view", (req, res) => {
     const { user_id } = req.query;
     if (user_id !== "") {
-        Survey.find({ user_id: user_id }, (err, surveys) => {
-            if (err) {
-                console.log(err);
-            } else {
-                const displaySurvey = surveys.map(survey => {
-                    const a = {
-                        id: survey.id,
-                        title: survey.title,
-                        noOfQuestions: survey.questions.length,
-                        noOfRecipients: survey.recipients.length,
-                        message: "Display Successfull"
-                    };
-                    return a;
-                });
-                res.json(displaySurvey);
+        const userId = {
+            survey_user_id: user_id
+        };
+        let survey_id = [];
+        connection.query(
+            "select st.id, st.title, sq.questions, sr.email from survey_template st inner join survey_questions sq on st.id = sq.survey_template_id inner join survey_recipient sr on st.id=sr.survey_template_id where survey_user_id=?",
+            user_id,
+            (err, results, fields) => {
+                if (err) {
+                    console.log(err);
+                    res.json({ message: "Failed To Add" });
+                } else {
+                    const uniqueId = [...new Set(results.map(r => r.id))];
+                    const uniqueTitle = [...new Set(results.map(r => r.title))];
+                    const seperateArray = uniqueId.map(u => {
+                        return results.filter(r => {
+                            if (r.id === u) {
+                                return r.questions;
+                            }
+                        });
+                    });
+                    const email = seperateArray.map(r => {
+                        const temp = r.map(a => a.email);
+                        return temp;
+                    });
+                    const uniqueEmail = email.map(e => [
+                        ...new Set(e.map(r => r))
+                    ]);
+                    const questions = seperateArray.map(r => {
+                        const temp = r.map(a => a.questions);
+                        return temp;
+                    });
+                    const uniqueQuestions = questions.map(e => [
+                        ...new Set(e.map(r => r))
+                    ]);
+                    const survey = uniqueTitle.map((u, i) => {
+                        const a = {
+                            id: uniqueId[i],
+                            title: uniqueTitle[i],
+                            noOfQuestions: uniqueQuestions[i].length,
+                            noOfRecipients: uniqueEmail[i].length,
+                            message: "Display Successfull"
+                        };
+                        return a;
+                    });
+                    res.json(survey);
+                }
             }
-        });
+        );
+
+        // Survey.find({ user_id: user_id }, (err, surveys) => {
+        //     if (err) {
+        //         console.log(err);
+        //     } else {
+        //         const displaySurvey = surveys.map(survey => {
+        //             const a = {
+        //                 id: survey.id,
+        //                 title: survey.title,
+        //                 noOfQuestions: survey.questions.length,
+        //                 noOfRecipients: survey.recipients.length,
+        //                 message: "Display Successfull"
+        //             };
+        //             return a;
+        //         });
+        //         res.json(displaySurvey);
+        //     }
+        // });
     } else {
         res.json({ message: "Failed" });
     }
@@ -75,13 +205,27 @@ router.get("/view", (req, res) => {
 router.get("/view/:id", (req, res) => {
     const { id } = req.params;
     if (id !== "") {
-        Survey.find({ _id: id }, (err, survey) => {
-            if (err) {
-                console.log(err);
-            } else {
-                res.json(survey);
+        connection.query(
+            "select st.id, st.survey_user_id, st.title, sq.questions, sr.email, sr.id as survey_recipient_id, sr.responded, st.templateNo, st.maxvalue, st.minvalue, st.coltitle from survey_template st inner join survey_questions sq on st.id = sq.survey_template_id inner join survey_recipient sr on st.id=sr.survey_template_id where st.id=?",
+            id,
+            (err, results, fields) => {
+                if (err) {
+                    console.log(err);
+                    res.json({ message: "Failed To Find" });
+                } else {
+                    res.json(results);
+                }
             }
-        });
+        );
+
+        // Survey.find({ _id: id }, (err, survey) => {
+        //     if (err) {
+        //         console.log(err);
+        //         res.json({ message: "Failed To Find" });
+        //     } else {
+        //         res.json(survey);
+        //     }
+        // });
     }
 });
 
