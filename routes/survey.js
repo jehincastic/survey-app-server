@@ -455,7 +455,7 @@ router.get("/send", (req, res) => {
                                 from: "jehincastic@gmail.com",
                                 to: rec,
                                 subject: results[0].title,
-                                html: `<p>Please take your survey <a href=https://review-app-c82bf.firebaseapp.com/?user_id=${
+                                html: `<p>Please take your survey <a href=https://review-app-cc79e.firebaseapp.com/?user_id=${
                                     uniqueId[i]
                                 }&sur_id=${id}>here</a>.</p>`
                             };
