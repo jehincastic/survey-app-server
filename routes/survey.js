@@ -467,6 +467,8 @@ router.get("/send", (req, res) => {
                                 }
                             });
                             if (i === rec.length - 1) {
+                                console.log(done);
+                                console.log('done');
                                 if (done) {
                                     res.json({ message: "Send Successfully" });
                                 } else {
