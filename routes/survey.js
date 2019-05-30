@@ -464,6 +464,8 @@ router.get("/send", (req, res) => {
                                     done = false;
                                     console.log(err);
                                     res.json({ message: err });
+                                } else {
+                                    console.log("Send");
                                 }
                             });
                         }
