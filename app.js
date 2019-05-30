@@ -15,6 +15,6 @@ app.use(cors());
 app.use(indexRoutes);
 app.use("/survey", surveyRoutes);
 
-app.listen(4000, () => {
-    console.log("Listening on PORT 4000");
+app.listen(process.env.PORT, process.env.IP, function() {
+    console.log("Listening on 4000");
 });
