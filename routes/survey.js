@@ -466,13 +466,15 @@ router.get("/send", (req, res) => {
                                     res.json({ message: err });
                                 }
                             });
+                            if (i === rec.length - 1) {
+                                if (done) {
+                                    res.json({ message: "Send Successfully" });
+                                } else {
+                                    res.json({ message: "failed to send" });
+                                }
+                            }
                         }
                     });
-                    if (done) {
-                        res.json({ message: "Send Successfully" });
-                    } else {
-                        res.json({ message: "failed to send" });
-                    }
                 }
             }
         );
