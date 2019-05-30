@@ -450,7 +450,6 @@ router.get("/send", (req, res) => {
                     const uniqueResponded = responded[0];
                     let done = true;
                     emails.forEach((rec, i) => {
-                        console.log(!Number(uniqueResponded[i]));
                         if (!Number(uniqueResponded[i])) {
                             const mailOptions = {
                                 from: "jehincastic@gmail.com",
@@ -469,7 +468,6 @@ router.get("/send", (req, res) => {
                             });
                         }
                         if (i === emails.length - 1) {
-                            console.log(done);
                             if (done) {
                                 res.json({ message: "Send Successfully" });
                             } else {
